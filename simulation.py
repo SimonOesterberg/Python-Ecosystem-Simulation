@@ -54,7 +54,8 @@ def run_simulation(config):
     for entity in config["world"]["entities"]:
         entity = config["world"]["entities"][entity]
         if entity["track"]:
-            entity_counts[entity["symbol"]] = {"initial": entity["count"], "recorded": []}
+            entity_counts[entity["symbol"]] = {"initial": entity["count"], "recorded": [0] * config["simulation"]["num_repeats"]}
+
 
     progress_bar = tqdm(total=config["simulation"]["num_repeats"], desc="Simulation Progress", unit="repeat")
 
@@ -159,11 +160,7 @@ def run_simulation(config):
         for row in world.grid:
             for cell in row:
                 if cell.display in entity_counts:
-                    entity_type = cell.display
-                    recorded_list = entity_counts[entity_type]["recorded"]
-                    while len(recorded_list) <= repeat:
-                        recorded_list.append(0)
-                    entity_counts[entity_type]["recorded"][repeat] += 1
+                    entity_counts[cell.display]["recorded"][repeat] += 1
 
         end_time = time.process_time()
         duration = end_time - start_time
