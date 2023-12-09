@@ -24,7 +24,7 @@ class Creature():
 
         self.species = species
         self.role = role
-        self.hunger_threshold = hunger_threshold, 
+        self.hunger_threshold = hunger_threshold
         self.thirst_threshold = thirst_threshold
                 
     def consume(self, entity, type):

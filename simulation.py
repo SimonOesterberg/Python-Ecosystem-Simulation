@@ -18,7 +18,7 @@ config = {
     "simulation": {
         "visualize": False,
         "num_turns": 10,
-        "num_repeats": 1000
+        "num_repeats": 10000
     },
     "world": {
         "size": (15,15),
@@ -28,8 +28,8 @@ config = {
             "conifer": {"entity": "conifer", "symbol": "🌲", "count": 5, "track": False},
             "leaf tree": {"entity": "leaf tree","symbol": "🌳", "count": 5, "track": False},
             "grass": {"entity": "grass", "symbol": "🌱", "count": 20, "track": True},
-            "fox": {"entity": Creature("fox", "predator", 15, 15), "symbol": "🦊", "count": 5, "track": True},
-            "rabbit": {"entity": Creature("rabbit", "prey", 15, 15), "symbol": "🐇", "count": 15, "track": True}
+            "fox": {"entity": Creature("fox", "predator", 5, 5), "symbol": "🦊", "count": 5, "track": True},
+            "rabbit": {"entity": Creature("rabbit", "prey", 5, 5), "symbol": "🐇", "count": 15, "track": True}
         },
     }
 }
@@ -71,25 +71,45 @@ def run_simulation(config):
 
         for turn in range(config["simulation"]["num_turns"]):
 
-            creature_dict = []
+            # Get all predators and prey in the world
+            predators = []
+            prey = []
 
             for row in world.grid:
                 for cell in row:
                     if isinstance(cell.entity, Creature):
-                        creature_dict.append({"cell" : cell,
-                                               "creature": cell.entity})
+                        if cell.entity.role == "predator":
+                            predators.append(cell)
+                        elif cell.entity.role == "prey":
+                            prey.append(cell)
 
-            random.shuffle(creature_dict)
+            random.shuffle(predators)
+            random.shuffle(prey)
 
-            for creature_object in creature_dict:
+
+
+            while len(predators) > 0 or len(prey) > 0:
+
                 if config["simulation"]["visualize"]:
                     clear_terminal()
                     print(f"Turn {turn + 1}")
                     world.show()
                     time.sleep(0.1)
 
-                creature_cell = creature_object["cell"]
-                creature = creature_object["creature"]
+                if len(predators) != 0 and len(prey) != 0:
+                    active_list = random.choice([predators, prey])
+                    active_list_type = "predators" if active_list is predators else "prey"
+                elif len(predators) != 0:
+                    active_list = predators
+                    active_list_type = "predators"
+                else:
+                    active_list = prey
+                    active_list_type = "prey"
+                    
+                
+
+                creature_cell = active_list[0]
+                creature = active_list[0].entity
 
                 if creature.alive:
                     surrounding_cells = creature_cell.get_surrounding_cells()
@@ -99,62 +119,71 @@ def run_simulation(config):
 
                     moved = False
 
-                    for surrounding_cell in surrounding_cells:
-                        entity_cell = surrounding_cell["cell"]
-                        entity = entity_cell.entity
+                    if active_list_type == "predators":
+                        for surrounding_cell in surrounding_cells:
+                            entity_cell = surrounding_cell["cell"]
+                            entity = entity_cell.entity
 
-                        if (entity_cell_to_drink == None or entity_cell_to_eat == None):
-                            if (
-                                entity_cell_to_eat == None and (
-                                    creature.role == "predator" and isinstance(entity, Creature) and entity.role == "prey" or
-                                    creature.role == "prey" and entity == "grass"
-                                )
-                            ):
-                                entity_cell_to_eat = entity_cell
+                            if (entity_cell_to_drink == None or entity_cell_to_eat == None):
+                                if entity_cell_to_eat == None and isinstance(entity, Creature) and entity.role == "prey":
+                                    entity_cell_to_eat = entity_cell
+                                if entity_cell_to_drink == None and entity == "water":
+                                    entity_cell_to_drink = entity_cell
+                            else:
+                                break
+                    
+                    elif active_list_type == "prey":
+                        for surrounding_cell in surrounding_cells:
+                            entity_cell = surrounding_cell["cell"]
+                            entity = entity_cell.entity
 
-                            if entity_cell_to_drink == None and entity == "water":
-                                entity_cell_to_drink = entity_cell
-                        else:
-                            break
+                            if (entity_cell_to_drink == None or entity_cell_to_eat == None or not moved):
+                                if entity_cell_to_eat == None and entity == "grass":
+                                    entity_cell_to_eat = entity_cell
+                                if entity_cell_to_drink == None and entity == "water":
+                                    entity_cell_to_drink = entity_cell
+                                if isinstance(entity, Creature) and entity.role == "predator":
+                                    prey_x, prey_y = cell.position
+                                    predator_x, predator_y = entity_cell.position
+
+                                    x_diff = predator_x - prey_x
+                                    y_diff = predator_y - prey_y
+
+                                    move_away_pos = (-1, -1)
+
+                                    if y_diff != 0:
+                                        move_away_pos = (prey_x, prey_y + y_diff // abs(y_diff))
+                                    elif x_diff != 0:
+                                        move_away_pos = (prey_x + prey_y // abs(x_diff), prey_y)
+
+                                    if creature_cell.move(move_away_pos):
+                                        moved = True
+                            else:
+                                break
+
 
                     if entity_cell_to_eat != None:
                         creature.consume(entity_cell_to_eat.entity, "food")
                         entity_cell_to_eat.clear()
 
                         creature_cell.move(entity_cell_to_eat.position)
-
                         moved = True
+
+                        if entity_cell_to_eat in prey:
+                            prey.remove(entity_cell_to_eat)                        
 
                     if entity_cell_to_drink != None:
                         creature.consume(entity_cell_to_drink.entity, "drink")
-                    
-                    for surrounding_cell in surrounding_cells:
-                        entity = surrounding_cell["cell"].entity
-
-                        if creature.role == "prey" and isinstance(entity, Creature) and entity.role == "predator":
-                            predator = surrounding_cell["cell"]
-
-                            prey_x, prey_y = cell.position
-                            predator_x, predator_y = predator.position
-
-                            x_diff = predator_x - prey_x
-                            y_diff = predator_y - prey_y
-
-                            move_away_pos = (-1, -1)
-
-                            if y_diff != 0:
-                                move_away_pos = (prey_x, prey_y + y_diff // abs(y_diff))
-                            elif x_diff != 0:
-                                move_away_pos = (prey_x + prey_y // abs(x_diff), prey_y)
-
-                            if creature_cell.move(move_away_pos):
-                                moved = True
 
                     # Random move only if not moved already
                     if not moved:
                         creature_cell.move("random")
+
+                    creature.update_vitals()
                 else:
                     creature_cell.clear()
+
+                del active_list[0]
 
         # Count occurrences of each type of entity in the grid
         for row in world.grid:
