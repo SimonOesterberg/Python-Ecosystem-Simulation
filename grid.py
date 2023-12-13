@@ -28,7 +28,7 @@ class Grid:
         # Create the grid
         self.grid = [[Cell(deepcopy(self.empty_cell["entity"]), self.empty_cell["display"], self, (x, y)) for y in range(self.size[0])] for x in range(self.size[1])]
     
-    def populate(self, entity, display, nr_of_cells, positions = []):
+    def populate(self, entity, display, nr_of_cells, coordinates = []):
         """
         Populate the grid with entities.
 
@@ -37,23 +37,19 @@ class Grid:
         - display: Display symbol for the entity.
         - nr_of_cells: Number of cells to be populated with the entity.
         """
-        available_cells = [(x, y) for x in range(self.size[0]) for y in range(self.size[1]) if self.grid[x][y].entity == self.empty_cell["entity"]]
+        available_coordinates = [(x, y) for x in range(self.size[0]) for y in range(self.size[1]) if self.grid[x][y].entity == self.empty_cell["entity"]]
         
-        random.shuffle(available_cells)  # Shuffle the available cells
+        random.shuffle(available_coordinates)  # Shuffle the available cells
 
-        selected_cells = []
+        selected_coordinates = coordinates
 
-        for position in positions:
-            x,y = position
-            selected_cells.append(self.grid[x][y])
+        if len(selected_coordinates) < nr_of_cells:
+            random_cells_needed = nr_of_cells - len(selected_coordinates)
 
-        if len(selected_cells) < nr_of_cells:
-            random_cells_needed = nr_of_cells - len(selected_cells)
+            for cell in available_coordinates[:random_cells_needed]:
+                selected_coordinates.append(cell)
 
-            for cell in available_cells[:random_cells_needed]:
-                selected_cells.append(cell)
-
-        for x, y in selected_cells:
+        for x, y in selected_coordinates:
             selected_cell = self.grid[x][y]
 
             selected_cell.entity = deepcopy(entity)
