@@ -28,7 +28,7 @@ class Grid:
         # Create the grid
         self.grid = [[Cell(deepcopy(self.empty_cell["entity"]), self.empty_cell["display"], self, (x, y)) for y in range(self.size[0])] for x in range(self.size[1])]
     
-    def populate(self, entity, display, nr_of_cells):
+    def populate(self, entity, display, nr_of_cells, positions = []):
         """
         Populate the grid with entities.
 
@@ -41,7 +41,17 @@ class Grid:
         
         random.shuffle(available_cells)  # Shuffle the available cells
 
-        selected_cells = available_cells[:min(nr_of_cells, len(available_cells))]
+        selected_cells = []
+
+        for position in positions:
+            x,y = position
+            selected_cells.append(self.grid[x][y])
+
+        if len(selected_cells) < nr_of_cells:
+            random_cells_needed = nr_of_cells - len(selected_cells)
+
+            for cell in available_cells[:random_cells_needed]:
+                selected_cells.append(cell)
 
         for x, y in selected_cells:
             selected_cell = self.grid[x][y]
