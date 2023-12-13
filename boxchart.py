@@ -32,8 +32,8 @@ def box_chart(data, labels, c=[], bar_width=0.35, figsize=(8, 6), show_initial=T
     data_means = []
 
     # Assign colors if not provided
-    while len(c) < labels_count:
-        c.append(list(mcolors.TABLEAU_COLORS.keys())[:labels_count])
+    if len(c) < labels_count:
+        c = (list(mcolors.TABLEAU_COLORS.keys())[:labels_count])
 
     for i in range(labels_count):
         recorded_data = data[i]["recorded"]
@@ -58,7 +58,7 @@ def box_chart(data, labels, c=[], bar_width=0.35, figsize=(8, 6), show_initial=T
 
         # Plot recorded data as bars
         plt.bar(
-            index[i], data_means[i], bar_width, label='Average', color=c[i],
+            index[i], data_means[i], bar_width, label='Average', color=c[i], alpha=0.5,
             edgecolor='black', linewidth=1.2, zorder=recorded_z
         )
 

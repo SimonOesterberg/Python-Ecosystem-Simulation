@@ -86,8 +86,6 @@ def run_simulation(config):
             random.shuffle(predators)
             random.shuffle(prey)
 
-
-
             while len(predators) > 0 or len(prey) > 0:
 
                 if config["simulation"]["visualize"]:
@@ -218,7 +216,7 @@ def run_simulation(config):
     std_dev_repeats_per_second = mean_repeats_per_second / mean_duration * std_dev_duration
 
     clear_terminal()
-    
+
     print(f"Mean repeats per second: {mean_repeats_per_second}")
     print(f"Standard deviation of repeats per second: {std_dev_repeats_per_second}")
 
