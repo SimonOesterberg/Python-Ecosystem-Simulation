@@ -1,7 +1,7 @@
 import random
 from copy import deepcopy
 
-class Grid():
+class Grid:
     def __init__(self, size, empty_cell):
         """
         Initialize the Grid object.
@@ -25,56 +25,28 @@ class Grid():
             
         self.empty_cell = empty_cell
         
-        # Create the grid
-        self.grid = self.create()
-    
-    def create(self):
-        """
-        Create the grid populated with Cell objects.
+        # Create the grid using references to the same empty cell object
+        self.grid = [[Cell(self.empty_cell["entity"], self.empty_cell["display"], self, (x, y)) for y in range(self.size[1])] for x in range(self.size[0])]
+        self.available_cells = {(x, y): True for x in range(self.size[0]) for y in range(self.size[1]) if self.grid[x][y].entity == self.empty_cell["entity"]}
 
-        Returns:
-        - grid (list): 2D list representing the grid populated with Cell objects.
-        """
-        grid_object = self
-
-        # Create a 2D list representing the grid using list comprehension
-        return [[Cell(deepcopy(self.empty_cell["entity"]), self.empty_cell["display"], grid_object, (x, y)) for y in range(self.size[0])] for x in range(self.size[1])]
-    
     def populate(self, entity, display, nr_of_cells):
-        """
-        Populate the grid with entities.
 
-        Args:
-        - entity: The entity to be populated in the grid.
-        - display: Display symbol for the entity.
-        - nr_of_cells: Number of cells to be populated with the entity.
-        """
-        
-        grid = self.grid
-        
-        available_cells = [(x, y) for x in range(self.size[0]) for y in range(self.size[1]) if
-                       grid[x][y].entity == self.empty_cell["entity"]]
-        
-        random.shuffle(available_cells)  # Shuffle the available cells
+        available_cells = [k for k, v in self.available_cells.items() if v is True]
 
+        random.shuffle(available_cells)
+        
         selected_cells = available_cells[:min(nr_of_cells, len(available_cells))]
-
+        
         for x, y in selected_cells:
-            selected_cell = grid[x][y]
-
+            selected_cell = self.grid[x][y]
             selected_cell.entity = deepcopy(entity)
             selected_cell.display = display
-                
-    def show(self):
-        """
-        Display the grid.
+            self.available_cells[(x, y)] = False
 
-        This function prints the grid to the console, displaying the entities in each cell using their display symbols.
-        """    
+    def show(self):
         for row in self.grid:
-            for cell in row:
-                print(cell.display, end=" ")
-            print()
+            row_string = ' '.join(cell.display for cell in row)
+            print(row_string)
 
 class Cell():
     def __init__(self, entity, display, grid, position):
@@ -97,34 +69,31 @@ class Cell():
         Get surrounding cells of the current cell.
 
         Returns:
-        - surrounding_cells (list): List of dictionaries containing direction and neighboring Cell objects.
+        - surrounding_cells (list): List of neighboring Cell objects.
         """
         pos_x, pos_y = self.position
-        
         grid = self.grid
         gridsize_x, gridsize_y = grid.size
 
-        surrounding_cells = []
+        directions = [
+            (pos_x, pos_y - 1),
+            (pos_x, pos_y + 1),
+            (pos_x - 1, pos_y),
+            (pos_x + 1, pos_y)
+        ]
 
-        directions = {
-            "above": (pos_x, pos_y - 1),
-            "below": (pos_x, pos_y + 1),
-            "left" : (pos_x - 1, pos_y),
-            "right": (pos_x + 1, pos_y)
-        }
+        # Extract grid once
+        grid_cells = grid.grid
 
-        for direction in directions:
-            direction_x, direction_y = directions[direction]
-
-            if 0 <= direction_x < gridsize_x and 0 <= direction_y < gridsize_y:
-                surrounding_cells.append({
-                    "direction": direction,
-                    "cell": grid.grid[direction_x][direction_y]
-                })
+        surrounding_cells = [
+            grid_cells[direction_x][direction_y]
+            for direction_x, direction_y in directions
+            if 0 <= direction_x < gridsize_x and 0 <= direction_y < gridsize_y
+        ]
 
         return surrounding_cells
     
-    def move(self, new_pos):
+    def move(self, new_pos, possible_moves = []):
         """
         Move the entity to a new position in the grid.
 
@@ -134,33 +103,35 @@ class Cell():
         Returns:
         - Boolean: True if the move was successful, False otherwise.
         """
-        if  type(new_pos) == tuple:
+
+        if type(new_pos) == tuple:
+            grid = self.grid.grid
             new_x, new_y = new_pos
 
-            grid_object = self.grid
-            grid = grid_object.grid
-
-            gridsize_x, gridsize_y = grid_object.size
-
-            if 0 < new_x < gridsize_x and 0 < new_y < gridsize_y and grid[new_x][new_y].entity == grid_object.empty_cell["entity"]:
+            if (new_x, new_y) in list(self.grid.available_cells.keys()):
                 origin_x, origin_y = self.position
 
                 grid[new_x][new_y].entity = deepcopy(self.entity)
                 grid[new_x][new_y].display = self.display
+
+                self.grid.available_cells[(new_x, new_y)] = False
+                self.grid.available_cells[(origin_x, origin_y)] = True
 
                 grid[origin_x][origin_y].clear()
 
                 return True # Return True if move was possible
             return False # Return False if move was not possible
         elif new_pos == "random":
-            surrounding_cells = self.get_surrounding_cells()
-            random.shuffle(surrounding_cells) # Get the surrounding cells'
-            
-            for cell in surrounding_cells:
-                cell = cell["cell"]
 
+            if len(possible_moves) == 0:
+                possible_moves = self.get_surrounding_cells()
+
+            random.shuffle(possible_moves) # Get the surrounding cells'
+            
+            for cell in possible_moves:
                 # Try to move to the new position
-                if self.move(cell.position):
+                if cell.position in list(self.grid.available_cells.keys()):
+                    self.move(cell.position)
                     break
                 
     def clear(self):
@@ -168,5 +139,8 @@ class Cell():
         Clear the cell by resetting it to an empty state.
         """
         empty_cell = self.grid.empty_cell
-        self.entity = deepcopy(empty_cell["entity"])
+        pos_x, pos_y = self.position
+
+        self.grid.available_cells[(pos_x, pos_y)] = True
+        self.entity = empty_cell["entity"]
         self.display = empty_cell["display"]
