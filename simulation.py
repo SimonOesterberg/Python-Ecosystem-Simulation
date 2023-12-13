@@ -111,6 +111,9 @@ def run_simulation(config):
                 creature_cell = active_list[0]
                 creature = active_list[0].entity
 
+                if not isinstance(creature, Creature):
+                    break
+                
                 if creature.alive:
                     surrounding_cells = creature_cell.get_surrounding_cells()
 
@@ -121,7 +124,7 @@ def run_simulation(config):
 
                     if active_list_type == "predators":
                         for surrounding_cell in surrounding_cells:
-                            entity_cell = surrounding_cell["cell"]
+                            entity_cell = surrounding_cell
                             entity = entity_cell.entity
 
                             if (entity_cell_to_drink == None or entity_cell_to_eat == None):
@@ -134,7 +137,7 @@ def run_simulation(config):
                     
                     elif active_list_type == "prey":
                         for surrounding_cell in surrounding_cells:
-                            entity_cell = surrounding_cell["cell"]
+                            entity_cell = surrounding_cell
                             entity = entity_cell.entity
 
                             if (entity_cell_to_drink == None or entity_cell_to_eat == None or not moved):
@@ -197,9 +200,6 @@ def run_simulation(config):
         progress_bar.update(1)
 
     progress_bar.close()
-
-
-    clear_terminal()
     
     plot = box_chart(list(entity_counts.values()), entity_counts.keys(), c = ["orange", "white", "green"])
 
@@ -217,6 +217,8 @@ def run_simulation(config):
     mean_repeats_per_second = config["simulation"]["num_repeats"] / sum(run_times)
     std_dev_repeats_per_second = mean_repeats_per_second / mean_duration * std_dev_duration
 
+    clear_terminal()
+    
     print(f"Mean repeats per second: {mean_repeats_per_second}")
     print(f"Standard deviation of repeats per second: {std_dev_repeats_per_second}")
 
